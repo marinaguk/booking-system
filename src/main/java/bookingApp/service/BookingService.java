@@ -1,5 +1,6 @@
 package bookingApp.service;
 
+import bookingApp.exception.UnauthorizedException;
 import bookingApp.mapper.BookingMapper;
 import bookingApp.model.Role;
 import org.slf4j.Logger;
@@ -26,26 +27,27 @@ public class BookingService {
             LoggerFactory.getLogger(BookingService.class);
 
     private final PropertyRepository propertyRepository;
-    private final UserRepository userRepository;
     private final BookingRepository bookingRepository;
     private final UserService userService;
 
     public BookingService(PropertyRepository propertyRepository,
-                          UserRepository userRepository,
                           BookingRepository bookingRepository,
                           UserService userService) {
         this.propertyRepository = propertyRepository;
-        this.userRepository = userRepository;
         this.bookingRepository = bookingRepository;
         this.userService = userService;
     }
 
     public int createBooking(int userId, CreateBookingRequest request) {
-        UserEntity userEntity = userRepository.findById(userId);
+        UserEntity userEntity = userService.getUserEntityById(userId);
         PropertyEntity propertyEntity = propertyRepository.findById(request.getPropertyId());
 
         if (propertyEntity == null) {
             throw new NotFoundException("Property not found");
+        }
+
+        if (userEntity == null) {
+            throw new UnauthorizedException("Session is invalid");
         }
 
         LocalDate startDate = request.getStartDate();
@@ -74,10 +76,6 @@ public class BookingService {
 
         List<BookingEntity> bookingEntityList = bookingRepository.searchByUserId(userId, sortBy, sortDirection);
 
-        if (bookingEntityList.isEmpty()) {
-            return null;
-        }
-
         List<BookingResponse> responseList = BookingMapper.convertEntityToResponseList(bookingEntityList);
 
         return responseList;
@@ -90,7 +88,7 @@ public class BookingService {
         for (BookingEntity bookingEntity : existBookings) {
             LocalDate startDateBooking = bookingEntity.getStartDate();
             LocalDate endDateBooking = bookingEntity.getEndDate();
-            if (!(endDate.isBefore(startDateBooking) || startDate.isAfter(endDateBooking))) {
+            if ((endDate.isAfter(startDateBooking) && startDate.isBefore(endDateBooking))) {
                 return false;
             }
         }
@@ -98,8 +96,7 @@ public class BookingService {
 
     }
 
-    public void deleteBooking(int userId, int bookingId) {
-
+    private BookingEntity findBookingWithAccessCheck(int userId, int bookingId) {
         BookingEntity bookingEntity = bookingRepository.findById(bookingId);
         UserEntity userEntity = userService.getUserEntityById(userId);
 
@@ -107,26 +104,29 @@ public class BookingService {
             throw new NotFoundException("Booking not found");
         }
 
-        if (bookingEntity.getUserEntity().getId() != userId && userEntity.getRole() == Role.USER) {
-            throw new AccessDeniedException("This booking cannot be deleted");
+        if (userEntity == null) {
+            throw new UnauthorizedException("Session is invalid");
         }
+
+        if (bookingEntity.getUserEntity().getId() != userId && userEntity.getRole() == Role.USER) {
+            throw new AccessDeniedException("No access");
+        }
+
+        return bookingEntity;
+    }
+
+
+    public void deleteBooking(int userId, int bookingId) {
+
+       findBookingWithAccessCheck(userId, bookingId);
 
         bookingRepository.deleteById(bookingId);
 
         logger.info("Booking is deleted. User id: {}", userId);
     }
 
-    public BookingResponse getBookingById(int bookingId, int userId) {
-        BookingEntity bookingEntity = bookingRepository.findById(bookingId);
-        UserEntity userEntity = userService.getUserEntityById(userId);
-
-        if (bookingEntity == null) {
-            throw new NotFoundException("Booking not found");
-        }
-
-        if (bookingEntity.getUserEntity().getId() != userId && userEntity.getRole() == Role.USER) {
-            throw new AccessDeniedException("No access");
-        }
+    public BookingResponse getBookingById(int userId, int bookingId) {
+        BookingEntity bookingEntity = findBookingWithAccessCheck(userId, bookingId);
 
         BookingResponse response = BookingMapper.convertBookingEntityToResponse(bookingEntity);
         return response;

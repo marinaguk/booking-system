@@ -27,7 +27,7 @@ public class Main {
         UserRepository userRepository = new UserRepository();
 
         UserService userService = new UserService(userRepository);
-        BookingService bookingService = new BookingService(propertyRepository, userRepository, bookingRepository, userService);
+        BookingService bookingService = new BookingService(propertyRepository, bookingRepository, userService);
         PropertyService propertyService = new PropertyService(propertyRepository, userRepository, bookingRepository);
 
         UserController userController = new UserController(userService, propertyService);

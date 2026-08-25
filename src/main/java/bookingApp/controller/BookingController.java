@@ -106,14 +106,14 @@ public class BookingController implements HttpHandler {
         int bookingId = getIdFromRequest(exchange);
 
         bookingService.deleteBooking(userId, bookingId);
-        sendResponse(exchange, 200, "Booking delete");
+        sendResponse(exchange, 204, "Booking delete");
     }
 
     public void handleGetBookingById(HttpExchange exchange) throws IOException {
         int userId = getUserIdAuthorization(exchange);
         int bookingId = getIdFromRequest(exchange);
 
-        BookingResponse bookingResponse = bookingService.getBookingById(bookingId, userId);
+        BookingResponse bookingResponse = bookingService.getBookingById(userId, bookingId);
 
         String response = gson.toJson(bookingResponse);
         sendResponse(exchange, 200, response);
