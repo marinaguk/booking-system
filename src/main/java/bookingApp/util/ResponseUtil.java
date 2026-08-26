@@ -12,6 +12,9 @@ import java.util.Map;
 public class ResponseUtil {
 
     public static void sendResponse(HttpExchange exchange, int status, String message) throws IOException {
+        Headers headers = exchange.getResponseHeaders();
+        headers.set("Content-Type", "application/json; charset=UTF-8");
+
         byte[] bytes = message.getBytes(StandardCharsets.UTF_8);
 
         exchange.sendResponseHeaders(status, bytes.length);
@@ -19,6 +22,10 @@ public class ResponseUtil {
         try (OutputStream os = exchange.getResponseBody()) {
             os.write(bytes);
         }
+    }
+
+    public static void sendResponse(HttpExchange exchange, int status) throws IOException {
+        exchange.sendResponseHeaders(status, -1);
     }
 
     public static void sendResponse(HttpExchange exchange, int status, String message, Map<String, String> mapHeaders) throws IOException {

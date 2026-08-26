@@ -14,6 +14,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import static bookingApp.util.GsonUtil.messageToJson;
 import static bookingApp.util.HttpUtil.*;
 import static bookingApp.util.ResponseUtil.sendResponse;
 import static bookingApp.util.GsonUtil.gson;
@@ -67,7 +68,7 @@ public class BookingController implements HttpHandler {
         }
     }
 
-    public void handleCreate(HttpExchange exchange) throws IOException {
+    private void handleCreate(HttpExchange exchange) throws IOException {
         int userId = getUserIdAuthorization(exchange);
 
         String body = HttpUtil.readBody(exchange);
@@ -83,10 +84,10 @@ public class BookingController implements HttpHandler {
 
         String url = "/booking?id=" + bookingId;
 
-        sendResponse(exchange, 201, "Booking created", Map.of("Location", url));
+        sendResponse(exchange, 201, messageToJson("Booking created"), Map.of("Location", url));
     }
 
-    public void handleSearchMyBooking(HttpExchange exchange) throws IOException {
+    private void handleSearchMyBooking(HttpExchange exchange) throws IOException {
         int userId = getUserIdAuthorization(exchange);
 
         String sortBy = HttpUtil.getStringQueryParam(exchange, "sort", "date");
@@ -100,16 +101,16 @@ public class BookingController implements HttpHandler {
         sendResponse(exchange, 200, response);
     }
 
-    public void handleDelete (HttpExchange exchange) throws IOException{
+    private void handleDelete (HttpExchange exchange) throws IOException{
         int userId = getUserIdAuthorization(exchange);
 
         int bookingId = getIdFromRequest(exchange);
 
         bookingService.deleteBooking(userId, bookingId);
-        sendResponse(exchange, 204, "Booking delete");
+        sendResponse(exchange, 204);
     }
 
-    public void handleGetBookingById(HttpExchange exchange) throws IOException {
+    private void handleGetBookingById(HttpExchange exchange) throws IOException {
         int userId = getUserIdAuthorization(exchange);
         int bookingId = getIdFromRequest(exchange);
 

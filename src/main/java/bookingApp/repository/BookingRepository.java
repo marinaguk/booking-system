@@ -2,6 +2,7 @@ package bookingApp.repository;
 
 import bookingApp.dto.AllInfoBookingResponse;
 import bookingApp.entity.BookingEntity;
+import bookingApp.exception.AppException;
 import bookingApp.exception.BadRequestException;
 import bookingApp.exception.NotFoundException;
 import bookingApp.model.SearchBookingResult;
@@ -22,7 +23,10 @@ public class BookingRepository {
             entityManager.persist(bookingEntity);
             entityTransaction.commit();
         } catch (Exception e) {
-            entityTransaction.rollback();
+            if (entityTransaction.isActive()) {
+                entityTransaction.rollback();
+            }
+            throw new RuntimeException("Failed to save booking", e);
         } finally {
             entityManager.close();
         }
@@ -109,9 +113,14 @@ public class BookingRepository {
                 throw new NotFoundException("Booking not found");
             }
             tx.commit();
-        } catch (NoResultException e) {
-            tx.rollback();
-            throw e;
+        } catch (Exception e) {
+            if (tx.isActive()) {
+                tx.rollback();
+            }
+            if (e instanceof AppException) {
+                throw e;
+            }
+            throw new RuntimeException("Failed to delete booking", e);
         } finally {
             entityManager.close();
         }
