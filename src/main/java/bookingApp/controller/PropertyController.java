@@ -1,6 +1,8 @@
 package bookingApp.controller;
 
 import bookingApp.dto.*;
+import bookingApp.exception.MethodNotAllowedException;
+import bookingApp.exception.NotFoundException;
 import bookingApp.service.PropertyService;
 import bookingApp.util.ExceptionHandlerUtil;
 import bookingApp.util.HttpUtil;
@@ -11,6 +13,7 @@ import com.sun.net.httpserver.HttpHandler;
 
 import java.io.IOException;
 
+import static bookingApp.util.GsonUtil.errorToJson;
 import static bookingApp.util.HttpUtil.*;
 import static bookingApp.util.ResponseUtil.sendResponse;
 
@@ -27,20 +30,51 @@ public class PropertyController implements HttpHandler {
     @Override
     public void handle(HttpExchange exchange) throws IOException {
 
+        String method = exchange.getRequestMethod();
+        String path = exchange.getRequestURI().getPath();
+
         try {
-            if ("POST".equals(exchange.getRequestMethod()) &&
-                    "/property/search".equals(exchange.getRequestURI().getPath())) {
-                handleSearch(exchange);
-            } else if ("DELETE".equals(exchange.getRequestMethod()) &&
-                    "/property/delete".equals(exchange.getRequestURI().getPath())) {
-                handleDelete(exchange);
-            } else if ("GET".equals(exchange.getRequestMethod()) &&
-                    "/property/getavailability".equals(exchange.getRequestURI().getPath())) {
-                handleGetAvailability(exchange);
-            } else if ("GET".equals(exchange.getRequestMethod()) &&
-                    "/property/getallbookings".equals(exchange.getRequestURI().getPath())) {
-                handleGetAllBooking(exchange);
+
+            switch (path) {
+
+                case "/property/search":
+                    if ("POST".equals(method)) {
+                        handleSearch(exchange);
+                    } else {
+                        throw new MethodNotAllowedException("Method Not Allowed", "POST");
+                    }
+                    break;
+
+                case "/property":
+                    if ("GET".equals(method)) {
+                        handleGetById(exchange);
+                    } else if ("DELETE".equals(method)) {
+                        handleDelete(exchange);
+                    } else {
+                        throw new MethodNotAllowedException("Method Not Allowed", "GET, DELETE");
+                    }
+                    break;
+
+                case "/property/availability":
+                    if ("GET".equals(method)) {
+                        handleGetAvailability(exchange);
+                    } else {
+                        throw new MethodNotAllowedException("Method Not Allowed", "GET");
+                    }
+                    break;
+
+                case "/property/allbookings":
+                    if ("GET".equals(method)) {
+                        handleGetAllBooking(exchange);
+                    } else {
+                        throw new MethodNotAllowedException("Method Not Allowed", "GET");
+                    }
+                    break;
+
+                default:
+                    throw new NotFoundException("Not found");
             }
+
         } catch (Exception e) {
             ExceptionHandlerUtil.handle(exchange, e);
         } finally {
@@ -48,7 +82,7 @@ public class PropertyController implements HttpHandler {
         }
     }
 
-    public void handleSearch(HttpExchange exchange) throws IOException{
+    private void handleSearch(HttpExchange exchange) throws IOException{
         String body = HttpUtil.readBody(exchange);
         SearchPropertyRequest request = gson.fromJson(body, SearchPropertyRequest.class);
 
@@ -71,16 +105,16 @@ public class PropertyController implements HttpHandler {
         sendResponse(exchange, 200, response);
     }
 
-    public void handleDelete(HttpExchange exchange) throws IOException{
+    private void handleDelete(HttpExchange exchange) throws IOException{
         int userId = getUserIdAuthorization(exchange);
 
         int propertyId = getIdFromRequest(exchange);
 
         propertyService.delete(userId, propertyId);
-        sendResponse(exchange, 200, "Property deleted");
+        sendResponse(exchange, 204);
     }
 
-    public void handleGetAvailability(HttpExchange exchange) throws IOException {
+    private void handleGetAvailability(HttpExchange exchange) throws IOException {
 
         int propertyId = getIdFromRequest(exchange);
 
@@ -91,7 +125,7 @@ public class PropertyController implements HttpHandler {
        sendResponse(exchange, 200, response);
     }
 
-    public void handleGetAllBooking(HttpExchange exchange) throws IOException {
+    private void handleGetAllBooking(HttpExchange exchange) throws IOException {
         int userId = getUserIdAuthorization(exchange);
         int propertyId = getIdFromRequest(exchange);
 
@@ -102,6 +136,16 @@ public class PropertyController implements HttpHandler {
         AllBookingResponse allBookingResponse = propertyService.getAllBooking(userId, propertyId, page, size);
 
         String response = gson.toJson(allBookingResponse);
+
+        sendResponse(exchange, 200, response);
+    }
+
+    private void handleGetById(HttpExchange exchange) throws IOException {
+        int propertyId = getIdFromRequest(exchange);
+
+        PropertyResponse propertyResponse = propertyService.getById(propertyId);
+
+        String response = gson.toJson(propertyResponse);
 
         sendResponse(exchange, 200, response);
     }

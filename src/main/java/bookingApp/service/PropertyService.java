@@ -18,7 +18,7 @@ import org.slf4j.LoggerFactory;
 
 import java.util.List;
 
-import static bookingApp.mapper.PropertyMapper.*;
+import static bookingApp.util.GsonUtil.errorToJson;
 
 public class PropertyService {
 
@@ -35,7 +35,7 @@ public class PropertyService {
         this.bookingRepository = bookingRepository;
     }
 
-    public void addProperty(UserEntity owner, AddPropertyRequest addPropertyRequest) {
+    public int addProperty(UserEntity owner, AddPropertyRequest addPropertyRequest) {
         PropertyEntity propertyEntity = addPropertyRequest.propertyRequestToEntity(owner);
 
         if (propertyRepository.findByName(propertyEntity.getPropertyName()) != null) {
@@ -45,6 +45,8 @@ public class PropertyService {
         propertyRepository.save(propertyEntity);
 
         logger.info("Property is added. User id: {}", owner.getId());
+
+        return propertyEntity.getPropertyId();
     }
 
     public SearchPropertyResponse search(SearchPropertyRequest request, int page, int size, String sortBy, String sortDirection) {
@@ -52,7 +54,7 @@ public class PropertyService {
         SearchPropertyResult searchProperties = propertyRepository.search(request, offset, size, sortBy, sortDirection);
 
         long totalItems = searchProperties.getTotalItems();
-        List<PropertyResponse> responseList = PropertyMapper.convertPropertyEntityToResponse(searchProperties.getItems());
+        List<PropertyResponse> responseList = PropertyMapper.convertPropertyEntityToResponseList(searchProperties.getItems());
         int totalPages = (int)Math.ceil((double) totalItems /size);
 
         SearchPropertyResponse response = new SearchPropertyResponse();
@@ -131,6 +133,16 @@ public class PropertyService {
         response.setTotalPages(totalPages);
 
         return response;
+    }
+
+    public PropertyResponse getById(int id) {
+        PropertyEntity propertyEntity = propertyRepository.findById(id);
+
+        if (propertyEntity == null) {
+            throw new NotFoundException("Property not found");
+        }
+
+        return PropertyMapper.convertPropertyEntityToResponse(propertyEntity);
     }
 
 }

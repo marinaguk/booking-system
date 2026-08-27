@@ -14,10 +14,9 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import static bookingApp.util.GsonUtil.messageToJson;
+import static bookingApp.util.GsonUtil.*;
 import static bookingApp.util.HttpUtil.*;
 import static bookingApp.util.ResponseUtil.sendResponse;
-import static bookingApp.util.GsonUtil.gson;
 
 public class BookingController implements HttpHandler {
 
@@ -58,7 +57,7 @@ public class BookingController implements HttpHandler {
                     break;
 
                 default:
-                    throw new NotFoundException("Not found");
+                    throw new NotFoundException(errorToJson("Not found"));
 
             }
         } catch (Exception e) {

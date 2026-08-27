@@ -26,7 +26,7 @@ public class HttpUtil {
         return buffer.toString();
     }
 
-    public static Integer getUserIdFromSession(HttpExchange exchange) {
+    private static Integer getUserIdFromSession(HttpExchange exchange) {
         String session = exchange.getRequestHeaders().getFirst("Session-Id");
         if (session == null) return null;
         return SessionManager.getUserId(session);

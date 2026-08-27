@@ -8,18 +8,14 @@ import org.slf4j.LoggerFactory;
 
 import bookingApp.dto.CreateBookingRequest;
 import bookingApp.dto.BookingResponse;
-import bookingApp.entity.BookingEntity;
-import bookingApp.entity.PropertyEntity;
-import bookingApp.entity.UserEntity;
-import bookingApp.exception.AccessDeniedException;
-import bookingApp.exception.BadRequestException;
-import bookingApp.exception.NotFoundException;
-import bookingApp.repository.BookingRepository;
-import bookingApp.repository.PropertyRepository;
-import bookingApp.repository.UserRepository;
+import bookingApp.entity.*;
+import bookingApp.exception.*;
+import bookingApp.repository.*;
 
 import java.time.LocalDate;
 import java.util.List;
+
+import static bookingApp.util.GsonUtil.errorToJson;
 
 public class BookingService {
 
@@ -101,15 +97,15 @@ public class BookingService {
         UserEntity userEntity = userService.getUserEntityById(userId);
 
         if (bookingEntity == null) {
-            throw new NotFoundException("Booking not found");
+            throw new NotFoundException(errorToJson("Booking not found"));
         }
 
         if (userEntity == null) {
-            throw new UnauthorizedException("Session is invalid");
+            throw new UnauthorizedException(errorToJson("Session is invalid"));
         }
 
         if (bookingEntity.getUserEntity().getId() != userId && userEntity.getRole() == Role.USER) {
-            throw new AccessDeniedException("No access");
+            throw new AccessDeniedException(errorToJson("No access"));
         }
 
         return bookingEntity;

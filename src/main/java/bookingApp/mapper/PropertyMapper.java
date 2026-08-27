@@ -9,7 +9,7 @@ import java.util.List;
 
 public class PropertyMapper {
 
-    public static List<PropertyResponse> convertPropertyEntityToResponse(List<PropertyEntity> propertyEntityList) {
+    public static List<PropertyResponse> convertPropertyEntityToResponseList(List<PropertyEntity> propertyEntityList) {
         List<PropertyResponse> responseList = new ArrayList<>();
 
         for (PropertyEntity propertyEntity : propertyEntityList) {
@@ -34,6 +34,14 @@ public class PropertyMapper {
             result.add(response);
         }
         return result;
+    }
+
+    public static PropertyResponse convertPropertyEntityToResponse(PropertyEntity entity) {
+        PropertyResponse response = new PropertyResponse();
+        response.setName(entity.getPropertyName());
+        response.setCity(entity.getPropertyCity());
+        response.setPrice(entity.getPropertyPrice());
+        return response;
     }
 
 }

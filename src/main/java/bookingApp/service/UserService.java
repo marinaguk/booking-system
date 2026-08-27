@@ -1,8 +1,5 @@
 package bookingApp.service;
 
-import bookingApp.controller.PropertyController;
-import bookingApp.dto.AddPropertyRequest;
-import bookingApp.entity.PropertyEntity;
 import bookingApp.entity.UserEntity;
 import bookingApp.exception.BadRequestException;
 import bookingApp.repository.UserRepository;
@@ -23,7 +20,7 @@ public class UserService {
         this.userRepository = userRepository;
     }
 
-    public void register(String name, String password) {
+    public int register(String name, String password) {
 
         if (userRepository.findByName(name) != null) {
             throw new BadRequestException("User already exists");
@@ -33,7 +30,11 @@ public class UserService {
 
         UserEntity userEntity = new UserEntity(name, hashedPassword);
         userRepository.save(userEntity);
-        logger.info("User is registered");
+
+        int userId = userEntity.getId();
+
+        logger.info("User is registered. User id: {}", userId);
+        return userId;
     }
 
     public String login(String name, String password) {

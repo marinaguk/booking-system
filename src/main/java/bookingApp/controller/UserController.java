@@ -15,7 +15,10 @@ import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
 
 import java.io.IOException;
+import java.util.Map;
 
+import static bookingApp.util.GsonUtil.messageToJson;
+import static bookingApp.util.HttpUtil.getIdFromRequest;
 import static bookingApp.util.HttpUtil.getUserIdAuthorization;
 import static bookingApp.util.ResponseUtil.sendResponse;
 
@@ -33,22 +36,48 @@ public class UserController implements HttpHandler {
 
     @Override
     public void handle(HttpExchange exchange) throws IOException { //получает данные запроса, заголовки, тело и отправляет ответ клиенту
+
+        String method = exchange.getRequestMethod();
+        String path = exchange.getRequestURI().getPath();
+
         try {
-            if ("POST".equals(exchange.getRequestMethod()) &&
-                    "/user/register".equals(exchange.getRequestURI().getPath())) {
 
-                handleRegister(exchange);
+            switch (path) {
 
-            } else if ("POST".equals(exchange.getRequestMethod()) &&
-                    "/user/login".equals(exchange.getRequestURI().getPath())){
+                case "/user/register":
+                    if ("POST".equals(method)) {
+                        handleRegister(exchange);
+                    } else {
+                        throw new MethodNotAllowedException("Method Not Allowed", "POST");
+                    }
+                    break;
 
-                handleLogin(exchange);
+                case "/user/login":
+                    if ("POST".equals(method)) {
+                        handleLogin(exchange);
+                    } else {
+                        throw new MethodNotAllowedException("Method Not Allowed", "POST");
+                    }
+                    break;
 
-            } else if ("POST".equals(exchange.getRequestMethod()) &&
-                    "/user/addproperty".equals(exchange.getRequestURI().getPath())) {
+                case "/user/property":
+                    if ("POST".equals(method)) {
+                        handleAddProperty(exchange);
+                    } else {
+                        throw new MethodNotAllowedException("Method Not Allowed", "POST");
+                    }
+                    break;
 
-                handleAddProperty(exchange);
+                case "/user":
+                    if ("GET".equals(method)) {
+                       handleGet(exchange);
+                    } else {
+                        throw new MethodNotAllowedException("Method Not Allowed", "GET");
+                    }
+                    break;
 
+                default:
+                    throw new NotFoundException("Not found");
             }
         } catch (Exception e) {
             ExceptionHandlerUtil.handle(exchange, e);
@@ -66,8 +95,12 @@ public class UserController implements HttpHandler {
         ValidationUtil.requireNotEmpty(request.getName(), "Name is required");
         ValidationUtil.requireNotEmpty(request.getPassword(), "Password is required");
 
-        userService.register(request.getName(), request.getPassword());
-        sendResponse(exchange,200, "User is registered");
+        int userId = userService.register(request.getName(), request.getPassword());
+
+
+        String url = "/user?id=" + userId;
+
+        sendResponse(exchange,201, messageToJson("User is registered"), Map.of("Location", url));
     }
 
     private void handleLogin(HttpExchange exchange) throws IOException{
@@ -80,8 +113,11 @@ public class UserController implements HttpHandler {
 
         String sessionId = userService.login(request.getName(), request.getPassword());
 
-        ValidationUtil.requireNotNull(sessionId, "Invalid credentials");
-        sendResponse(exchange, 200, sessionId);
+        if (sessionId == null) {
+            throw new UnauthorizedException("Invalid credentials");
+        }
+
+        sendResponse(exchange, 200, gson.toJson(Map.of("sessionId", sessionId)));
     }
 
     private void handleAddProperty(HttpExchange exchange) throws IOException {
@@ -98,10 +134,30 @@ public class UserController implements HttpHandler {
         UserEntity userEntity = userService.getUserEntityById(userId);
 
         if (userEntity == null) {
+            throw new UnauthorizedException("Session is invalid");
+        }
+
+        int propertyId = propertyService.addProperty(userEntity, addPropertyRequest);
+
+        String url = "/property?id=" + propertyId;
+
+        sendResponse(exchange, 201, messageToJson("Property is added"), Map.of("Location", url));
+    }
+
+    private void handleGet(HttpExchange exchange) throws IOException {
+        int userId = getIdFromRequest(exchange);
+
+        UserEntity userEntity = userService.getUserEntityById(userId);
+
+
+        if (userEntity == null) {
             throw new NotFoundException("User not found");
         }
 
-        propertyService.addProperty(userEntity, addPropertyRequest);
-        sendResponse(exchange, 200, "Property is added");
+        UserResponse userResponse = new UserResponse(userId, userEntity.getName());
+
+        String response = gson.toJson(userResponse);
+
+        sendResponse(exchange, 200, response);
     }
 }

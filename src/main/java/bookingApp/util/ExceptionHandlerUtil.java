@@ -20,23 +20,23 @@ public class ExceptionHandlerUtil {
 
     public static void handle(HttpExchange exchange, Exception e) throws IOException {
         if (e instanceof BadRequestException) {
+            logger.warn("BadRequestException", e);
             sendResponse(exchange, 400, errorToJson(e.getMessage()));
-            logger.error("BadRequestException", e);
         } else if (e instanceof UnauthorizedException) {
+            logger.warn("UnauthorizedException", e);
             sendResponse(exchange, 401, errorToJson(e.getMessage()));
-            logger.error("UnauthorizedException", e);
         } else if (e instanceof AccessDeniedException) {
+            logger.warn("AccessDeniedException", e);
             sendResponse(exchange, 403, errorToJson(e.getMessage()));
-            logger.error("AccessDeniedException", e);
         } else if (e instanceof NotFoundException) {
+            logger.warn("NotFoundException", e);
             sendResponse(exchange, 404, errorToJson(e.getMessage()));
-            logger.error("NotFoundException", e);
         } else if (e instanceof MethodNotAllowedException) {
+            logger.warn("MethodNotAllowedException", e);
             sendResponse(exchange, 405, errorToJson(e.getMessage()), Map.of("Allow", ((MethodNotAllowedException) e).getAllowedMethods()));
-            logger.error("MethodNotAllowedException", e);
         } else {
-            sendResponse(exchange, 500, "Internal Server Error");
             logger.error("Exception", e);
+            sendResponse(exchange, 500, errorToJson("Internal Server Error"));
         }
     }
 }

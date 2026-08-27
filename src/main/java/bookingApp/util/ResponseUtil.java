@@ -9,6 +9,8 @@ import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
 
+import static bookingApp.util.GsonUtil.messageToJson;
+
 public class ResponseUtil {
 
     public static void sendResponse(HttpExchange exchange, int status, String message) throws IOException {
