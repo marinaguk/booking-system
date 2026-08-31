@@ -1,13 +1,11 @@
 package bookingApp.util;
 
-import bookingApp.controller.PropertyController;
 import bookingApp.exception.*;
 import com.sun.net.httpserver.HttpExchange;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
-import java.util.HashMap;
 import java.util.Map;
 
 import static bookingApp.util.GsonUtil.errorToJson;
