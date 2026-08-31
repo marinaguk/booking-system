@@ -15,8 +15,6 @@ import bookingApp.repository.*;
 import java.time.LocalDate;
 import java.util.List;
 
-import static bookingApp.util.GsonUtil.errorToJson;
-
 public class BookingService {
 
     private static final Logger logger =
@@ -97,15 +95,15 @@ public class BookingService {
         UserEntity userEntity = userService.getUserEntityById(userId);
 
         if (bookingEntity == null) {
-            throw new NotFoundException(errorToJson("Booking not found"));
+            throw new NotFoundException("Booking not found");
         }
 
         if (userEntity == null) {
-            throw new UnauthorizedException(errorToJson("Session is invalid"));
+            throw new UnauthorizedException("Session is invalid");
         }
 
         if (bookingEntity.getUserEntity().getId() != userId && userEntity.getRole() == Role.USER) {
-            throw new AccessDeniedException(errorToJson("No access"));
+            throw new AccessDeniedException("No access");
         }
 
         return bookingEntity;

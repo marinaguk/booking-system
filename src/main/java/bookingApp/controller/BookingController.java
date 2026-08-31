@@ -57,7 +57,7 @@ public class BookingController implements HttpHandler {
                     break;
 
                 default:
-                    throw new NotFoundException(errorToJson("Not found"));
+                    throw new NotFoundException("Not found");
 
             }
         } catch (Exception e) {
