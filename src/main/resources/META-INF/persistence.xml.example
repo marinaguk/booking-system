@@ -9,9 +9,9 @@
 
     <persistence-unit name="my-persistence-unit">
 
-        <class>UserEntity</class>
-        <class>PropertyEntity</class>
-        <class>BookingEntity</class>
+        <class>bookingApp.entity.UserEntity</class>
+        <class>bookingApp.entity.PropertyEntity</class>
+        <class>bookingApp.entity.BookingEntity</class>
 
         <properties>
             <!-- подключение к БД -->
