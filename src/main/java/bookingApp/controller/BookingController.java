@@ -1,24 +1,19 @@
 package bookingApp.controller;
 
 import bookingApp.dto.*;
-import bookingApp.exception.MethodNotAllowedException;
-import bookingApp.exception.NotFoundException;
 import bookingApp.service.*;
 import bookingApp.util.*;
-
-import com.sun.net.httpserver.HttpExchange;
-import com.sun.net.httpserver.HttpHandler;
-
-import java.io.IOException;
-import java.util.HashMap;
+import jakarta.validation.Valid;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+import java.net.URI;
 import java.util.List;
 import java.util.Map;
+import static bookingApp.util.ValidationUtil.requireValidSortDirection;
 
-import static bookingApp.util.GsonUtil.*;
-import static bookingApp.util.HttpUtil.*;
-import static bookingApp.util.ResponseUtil.sendResponse;
-
-public class BookingController implements HttpHandler {
+@RestController
+@RequestMapping("/booking")
+public class BookingController{
 
     private final BookingService bookingService;
 
@@ -26,96 +21,41 @@ public class BookingController implements HttpHandler {
         this.bookingService = bookingService;
     }
 
-    @Override
-    public void handle(HttpExchange exchange) throws IOException {
+    @PostMapping
+    public ResponseEntity<Map<String, String>> create(@RequestHeader(value = "Session-Id", required = false) String sessionId,
+                                                      @Valid @RequestBody CreateBookingRequest createBookingRequest) {
 
-        String method = exchange.getRequestMethod();
-        String path = exchange.getRequestURI().getPath();
+        int userId = ValidationUtil.requireValidSessionId(sessionId);
 
-        try {
+        int bookingId = bookingService.createBooking(userId, createBookingRequest);
 
-            switch (path) {
-
-                case "/booking":
-                    if ("POST".equals(method)) {
-                        handleCreate(exchange);
-                    } else if ("DELETE".equals(method)) {
-                        handleDelete(exchange);
-                    } else if ("GET".equals(method)) {
-                        handleGetBookingById(exchange);
-                    } else {
-                        throw new MethodNotAllowedException("Method Not Allowed", "GET, POST, DELETE");
-                    }
-                    break;
-
-                case "/booking/my":
-                    if ("GET".equals(method)) {
-                        handleSearchMyBooking(exchange);
-                    } else {
-                        throw new MethodNotAllowedException("Method Not Allowed", "GET");
-                    }
-                    break;
-
-                default:
-                    throw new NotFoundException("Not found");
-
-            }
-        } catch (Exception e) {
-            ExceptionHandlerUtil.handle(exchange, e);
-        } finally {
-            exchange.close();
-        }
+        return ResponseEntity.created(URI.create("/booking?id="+bookingId)).body(Map.of("message", "Booking Created"));
     }
 
-    private void handleCreate(HttpExchange exchange) throws IOException {
-        int userId = getUserIdAuthorization(exchange);
+    @GetMapping("/my")
+    public ResponseEntity<List<BookingResponse>> searchMyBooking(@RequestHeader(value = "Session-Id", required = false) String sessionId,
+                                                                 @RequestParam(defaultValue = "asc") String sortDirection) {
+        int userId = ValidationUtil.requireValidSessionId(sessionId);
+        requireValidSortDirection(sortDirection);
+        List<BookingResponse> responseList = bookingService.searchMyBooking(userId, sortDirection);
 
-        String body = HttpUtil.readBody(exchange);
-        CreateBookingRequest request = gson.fromJson(body, CreateBookingRequest.class);
-
-        ValidationUtil.requireNotNull(request, "Invalid JSON");
-        ValidationUtil.requirePositive(request.getPropertyId(), "Property id is required");
-
-        ValidationUtil.requireNotNull(request.getStartDate(), "Start date id is required");
-        ValidationUtil.requireNotNull(request.getEndDate(), "End date id is required");
-
-        int bookingId = bookingService.createBooking(userId, request);
-
-        String url = "/booking?id=" + bookingId;
-
-        sendResponse(exchange, 201, messageToJson("Booking created"), Map.of("Location", url));
+        return ResponseEntity.ok(responseList);
     }
 
-    private void handleSearchMyBooking(HttpExchange exchange) throws IOException {
-        int userId = getUserIdAuthorization(exchange);
+    @DeleteMapping
+    public ResponseEntity<Void> delete(@RequestHeader(value = "Session-Id", required = false) String sessionId,
+                                       @RequestParam int id) {
+        int userId = ValidationUtil.requireValidSessionId(sessionId);
+        bookingService.deleteBooking(userId, id);
 
-        String sortBy = HttpUtil.getStringQueryParam(exchange, "sort", "date");
-        String sortDirection = HttpUtil.getStringQueryParam(exchange, "direction", "asc");
-
-        ValidationUtil.requireValidBookingSort(sortBy, sortDirection);
-
-        List<BookingResponse> responseList = bookingService.searchMyBooking(userId, sortBy, sortDirection);
-
-        String response = gson.toJson(responseList);
-        sendResponse(exchange, 200, response);
+        return ResponseEntity.noContent().build();
     }
 
-    private void handleDelete (HttpExchange exchange) throws IOException{
-        int userId = getUserIdAuthorization(exchange);
-
-        int bookingId = getIdFromRequest(exchange);
-
-        bookingService.deleteBooking(userId, bookingId);
-        sendResponse(exchange, 204);
-    }
-
-    private void handleGetBookingById(HttpExchange exchange) throws IOException {
-        int userId = getUserIdAuthorization(exchange);
-        int bookingId = getIdFromRequest(exchange);
-
-        BookingResponse bookingResponse = bookingService.getBookingById(userId, bookingId);
-
-        String response = gson.toJson(bookingResponse);
-        sendResponse(exchange, 200, response);
+    @GetMapping
+    public ResponseEntity<BookingResponse> getById (@RequestHeader(value = "Session-Id", required = false) String sessionId,
+                                                    @RequestParam int id) {
+        int userId = ValidationUtil.requireValidSessionId(sessionId);
+        BookingResponse bookingResponse = bookingService.getBookingById(userId, id);
+        return ResponseEntity.ok(bookingResponse);
     }
 }

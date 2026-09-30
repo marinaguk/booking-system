@@ -1,12 +1,19 @@
 package bookingApp.dto;
 
+import jakarta.validation.constraints.PositiveOrZero;
+
 import java.time.LocalDate;
 
 public class SearchPropertyRequest {
 
     private String city;
+
+    @PositiveOrZero(message = "Min price cannot be negative")
     private Double minPrice;
+
+    @PositiveOrZero(message = "Max price cannot be negative")
     private Double maxPrice;
+
     private LocalDate startDate;
     private LocalDate endDate;
 

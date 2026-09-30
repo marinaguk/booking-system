@@ -1,25 +1,22 @@
 package bookingApp.controller;
 
 import bookingApp.dto.*;
-import bookingApp.exception.MethodNotAllowedException;
-import bookingApp.exception.NotFoundException;
+
 import bookingApp.service.PropertyService;
-import bookingApp.util.ExceptionHandlerUtil;
-import bookingApp.util.HttpUtil;
 
 import bookingApp.util.ValidationUtil;
-import com.sun.net.httpserver.HttpExchange;
-import com.sun.net.httpserver.HttpHandler;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
+import org.springframework.http.ResponseEntity;
+import org.springframework.validation.annotation.Validated;
+import org.springframework.web.bind.annotation.*;
 
-import java.io.IOException;
 
-import static bookingApp.util.GsonUtil.errorToJson;
-import static bookingApp.util.HttpUtil.*;
-import static bookingApp.util.ResponseUtil.sendResponse;
-
-import static bookingApp.util.GsonUtil.gson;
-
-public class PropertyController implements HttpHandler {
+@RestController
+@Validated
+@RequestMapping("/property")
+public class PropertyController{
 
     private final PropertyService propertyService;
 
@@ -27,126 +24,55 @@ public class PropertyController implements HttpHandler {
         this.propertyService = propertyService;
     }
 
-    @Override
-    public void handle(HttpExchange exchange) throws IOException {
+    @PostMapping("/search")
+    public ResponseEntity<SearchPropertyResponse> search(@RequestParam(defaultValue = "1")  @Min(value = 1, message = "Page must be positive") int page,
+                                                         @RequestParam(defaultValue = "5") @Min(value = 1, message = "Size must be positive") @Max(value = 100, message = "Max size is 100") int size,
+                                                         @RequestParam(defaultValue = "name") String sortBy,
+                                                         @RequestParam(defaultValue = "asc") String sortDirection,
+                                                         @Valid @RequestBody SearchPropertyRequest searchPropertyRequest) {
 
-        String method = exchange.getRequestMethod();
-        String path = exchange.getRequestURI().getPath();
-
-        try {
-
-            switch (path) {
-
-                case "/property/search":
-                    if ("POST".equals(method)) {
-                        handleSearch(exchange);
-                    } else {
-                        throw new MethodNotAllowedException("Method Not Allowed", "POST");
-                    }
-                    break;
-
-                case "/property":
-                    if ("GET".equals(method)) {
-                        handleGetById(exchange);
-                    } else if ("DELETE".equals(method)) {
-                        handleDelete(exchange);
-                    } else {
-                        throw new MethodNotAllowedException("Method Not Allowed", "GET, DELETE");
-                    }
-                    break;
-
-                case "/property/availability":
-                    if ("GET".equals(method)) {
-                        handleGetAvailability(exchange);
-                    } else {
-                        throw new MethodNotAllowedException("Method Not Allowed", "GET");
-                    }
-                    break;
-
-                case "/property/allbookings":
-                    if ("GET".equals(method)) {
-                        handleGetAllBooking(exchange);
-                    } else {
-                        throw new MethodNotAllowedException("Method Not Allowed", "GET");
-                    }
-                    break;
-
-                default:
-                    throw new NotFoundException("Not found");
-            }
-
-        } catch (Exception e) {
-            ExceptionHandlerUtil.handle(exchange, e);
-        } finally {
-            exchange.close();
-        }
-    }
-
-    private void handleSearch(HttpExchange exchange) throws IOException{
-        String body = HttpUtil.readBody(exchange);
-        SearchPropertyRequest request = gson.fromJson(body, SearchPropertyRequest.class);
-
-        int page = HttpUtil.getIntQueryParam(exchange, "page", 1);
-        int size = HttpUtil.getIntQueryParam(exchange, "size", 5);
-
-        ValidationUtil.requireNotNull(request, "Invalid JSON");
-        ValidationUtil.requireStartAndEndDate(request.getStartDate(), request.getEndDate());
-        ValidationUtil.requireValidPriceRange(request.getMinPrice(), request.getMaxPrice());
-        ValidationUtil.requireValidPageSize(page, size);
-
-        String sortBy = HttpUtil.getStringQueryParam(exchange, "sort", "name");
-        String sortDirection = HttpUtil.getStringQueryParam(exchange, "sortDirection", "asc");
-
+        ValidationUtil.requireStartAndEndDate(searchPropertyRequest.getStartDate(), searchPropertyRequest.getEndDate());
+        ValidationUtil.requireValidPriceRange(searchPropertyRequest.getMinPrice(), searchPropertyRequest.getMaxPrice());
         ValidationUtil.requireValidPropertySort(sortBy, sortDirection);
 
-        SearchPropertyResponse searchPropertyResponse = propertyService.search(request, page, size, sortBy, sortDirection);
+        SearchPropertyResponse searchPropertyResponse = propertyService.search(searchPropertyRequest, page, size, sortBy, sortDirection);
 
-        String response = gson.toJson(searchPropertyResponse);
-        sendResponse(exchange, 200, response);
+        return ResponseEntity.ok(searchPropertyResponse);
     }
 
-    private void handleDelete(HttpExchange exchange) throws IOException{
-        int userId = getUserIdAuthorization(exchange);
+    @DeleteMapping
+    public ResponseEntity<Void> delete(@RequestParam int id,
+                                       @RequestHeader(value = "Session-Id", required = false) String sessionId) {
 
-        int propertyId = getIdFromRequest(exchange);
+        int userId = ValidationUtil.requireValidSessionId(sessionId);
 
-        propertyService.delete(userId, propertyId);
-        sendResponse(exchange, 204);
+        propertyService.delete(userId, id);
+
+        return ResponseEntity.noContent().build();
     }
 
-    private void handleGetAvailability(HttpExchange exchange) throws IOException {
+    @GetMapping("/availability")
+    public ResponseEntity<PropertyAvailabilityResponse> getAvailability(@RequestParam int id) {
 
-        int propertyId = getIdFromRequest(exchange);
-
-       PropertyAvailabilityResponse availabilityResponse = propertyService.getAvailability(propertyId);
-
-       String response = gson.toJson(availabilityResponse);
-
-       sendResponse(exchange, 200, response);
+        PropertyAvailabilityResponse availabilityResponse = propertyService.getAvailability(id);
+        return ResponseEntity.ok(availabilityResponse);
     }
 
-    private void handleGetAllBooking(HttpExchange exchange) throws IOException {
-        int userId = getUserIdAuthorization(exchange);
-        int propertyId = getIdFromRequest(exchange);
+    @GetMapping("/allbookings")
+    public ResponseEntity<AllBookingResponse> getAllBooking(@RequestParam int id,
+                                                            @RequestHeader(value = "Session-Id", required = false) String sessionId,
+                                                            @RequestParam(defaultValue = "1") @Min(value = 1, message = "Page must be positive") int page,
+                                                            @RequestParam(defaultValue = "5") @Min(value = 1, message = "Size must be positive") @Max(value = 100, message = "Max size is 100") int size){
+        int userId = ValidationUtil.requireValidSessionId(sessionId);
+        AllBookingResponse response = propertyService.getAllBooking(userId, id, page, size);
 
-        int page = HttpUtil.getIntQueryParam(exchange, "page", 1);
-        int size = HttpUtil.getIntQueryParam(exchange, "size", 5);
-        ValidationUtil.requireValidPageSize(page, size);
-
-        AllBookingResponse allBookingResponse = propertyService.getAllBooking(userId, propertyId, page, size);
-
-        String response = gson.toJson(allBookingResponse);
-
-        sendResponse(exchange, 200, response);
+        return ResponseEntity.ok(response);
     }
 
-    private void handleGetById(HttpExchange exchange) throws IOException {
-        int propertyId = getIdFromRequest(exchange);
-
-        PropertyResponse propertyResponse = propertyService.getById(propertyId);
-
-        String response = gson.toJson(propertyResponse);
-
-        sendResponse(exchange, 200, response);
+    @GetMapping
+    public ResponseEntity<PropertyResponse> getById(@RequestParam int id) {
+        PropertyResponse propertyResponse = propertyService.getResponseById(id);
+        return ResponseEntity.ok(propertyResponse);
     }
+
 }

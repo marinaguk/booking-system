@@ -12,7 +12,15 @@ public class AllBookingResponse {
 
     private int totalPages;
 
-    private List<AllInfoBookingResponse> bookingResponseList;
+    private List<BookingResponseAllInfo> bookingResponseList;
+
+    public AllBookingResponse(long totalBookings, int page, int size, int totalPages, List<BookingResponseAllInfo> bookingResponseList) {
+        this.totalBookings = totalBookings;
+        this.page = page;
+        this.size = size;
+        this.totalPages = totalPages;
+        this.bookingResponseList = bookingResponseList;
+    }
 
     public long getTotalBookings() {
         return totalBookings;
@@ -22,11 +30,11 @@ public class AllBookingResponse {
         this.totalBookings = totalBookings;
     }
 
-    public List<AllInfoBookingResponse> getBookingResponseList() {
+    public List<BookingResponseAllInfo> getBookingResponseList() {
         return bookingResponseList;
     }
 
-    public void setBookingResponseList(List<AllInfoBookingResponse> bookingResponseList) {
+    public void setBookingResponseList(List<BookingResponseAllInfo> bookingResponseList) {
         this.bookingResponseList = bookingResponseList;
     }
 

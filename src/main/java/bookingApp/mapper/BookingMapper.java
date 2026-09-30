@@ -1,5 +1,6 @@
 package bookingApp.mapper;
 
+import bookingApp.dto.BookingResponseAllInfo;
 import bookingApp.dto.BookingResponse;
 import bookingApp.dto.BusyDateResponse;
 import bookingApp.entity.BookingEntity;
@@ -40,6 +41,14 @@ public class BookingMapper {
     public static BookingResponse convertBookingEntityToResponse(BookingEntity entity) {
         return new BookingResponse(entity.getId(),
                 entity.getPropertyEntity().getPropertyName(),
+                entity.getStartDate(),
+                entity.getEndDate());
+    }
+
+    public static BookingResponseAllInfo convertBookingEntityToResponseAllInfo(BookingEntity entity) {
+        return new BookingResponseAllInfo(entity.getId(),
+                entity.getPropertyEntity().getPropertyId(),
+                entity.getUserEntity().getId(),
                 entity.getStartDate(),
                 entity.getEndDate());
     }

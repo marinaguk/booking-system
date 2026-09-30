@@ -8,7 +8,13 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.mindrot.jbcrypt.BCrypt;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Optional;
+
+
+@Service
 public class UserService {
 
     private static final Logger logger =
@@ -20,9 +26,9 @@ public class UserService {
         this.userRepository = userRepository;
     }
 
+    @Transactional
     public int register(String name, String password) {
-
-        if (userRepository.findByName(name) != null) {
+        if (userRepository.findByName(name).isPresent()) {
             throw new BadRequestException("User already exists");
         }
 
@@ -37,9 +43,9 @@ public class UserService {
         return userId;
     }
 
+    @Transactional(readOnly = true)
     public String login(String name, String password) {
-
-        UserEntity user = userRepository.findByName(name);
+        UserEntity user = userRepository.findByName(name).orElse(null);
 
         if (user == null) {
             return null;
@@ -52,16 +58,10 @@ public class UserService {
         return SessionManager.createSession(user.getId());
     }
 
-
-    public UserEntity getUserEntityById(Integer id) {
-
-        if (id == null) {
-            return null;
-        }
-
-        UserEntity userEntity = userRepository.findById(id);
-        return userEntity;
-
+    @Transactional(readOnly = true)
+    public Optional<UserEntity> getUserEntityById(Integer id) {
+        return userRepository.findById(id);
     }
+
 
 }

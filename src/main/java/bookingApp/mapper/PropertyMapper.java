@@ -22,19 +22,6 @@ public class PropertyMapper {
         return responseList;
     }
 
-    public static List<AllInfoBookingResponse> convertPropertyEntityToBookingAllInfoList(List<BookingEntity> bookingEntityList) {
-        List<AllInfoBookingResponse> result = new ArrayList<>();
-        for (BookingEntity entity : bookingEntityList) {
-            AllInfoBookingResponse response = new AllInfoBookingResponse();
-            response.setBookingId(entity.getId());
-            response.setPropertyId(entity.getPropertyEntity().getPropertyId());
-            response.setUserId(entity.getUserEntity().getId());
-            response.setStartDate(entity.getStartDate());
-            response.setEndDate(entity.getEndDate());
-            result.add(response);
-        }
-        return result;
-    }
 
     public static PropertyResponse convertPropertyEntityToResponse(PropertyEntity entity) {
         PropertyResponse response = new PropertyResponse();

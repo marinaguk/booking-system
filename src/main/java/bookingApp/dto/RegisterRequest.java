@@ -1,8 +1,14 @@
 package bookingApp.dto;
+import jakarta.validation.constraints.*;
+
 
 public class RegisterRequest {
+    @NotBlank(message = "Name is required")
     private String name;
+
+    @NotBlank(message = "Password is required")
     private String password;
+
 
     public String getName() {
         return name;
