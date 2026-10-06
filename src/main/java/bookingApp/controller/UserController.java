@@ -36,7 +36,7 @@ public class UserController{
 
         int userId = userService.register(registerRequest.getName(), registerRequest.getPassword());
 
-        return ResponseEntity.created(URI.create("/user?id=" + userId))
+        return ResponseEntity.created(URI.create("/user/" + userId))
                 .body(Map.of("message", "User is registered"));
 
     }
@@ -59,11 +59,11 @@ public class UserController{
 
         int propertyId = propertyService.addProperty(userEntity, addPropertyRequest);
 
-        return ResponseEntity.created(URI.create("/property?id=" + propertyId)).body(Map.of("message", "Property is added"));
+        return ResponseEntity.created(URI.create("/property/" + propertyId)).body(Map.of("message", "Property is added"));
     }
 
-    @GetMapping
-    public ResponseEntity<UserResponse> getUser(@RequestParam int id) {
+    @GetMapping("/{id}")
+    public ResponseEntity<UserResponse> getUser(@PathVariable int id) {
         UserEntity userEntity = userService.getUserEntityById(id).orElseThrow(() -> new NotFoundException("User not found"));
 
         UserResponse userResponse = new UserResponse(id, userEntity.getName());

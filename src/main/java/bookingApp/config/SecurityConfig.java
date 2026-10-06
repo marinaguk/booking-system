@@ -31,7 +31,7 @@ public class SecurityConfig {
                         .sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(HttpMethod.POST, "/user/register", "/user/login", "/property/search").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/property", "/property/availability").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/property/{id}", "/property/{id}/availability").permitAll()
                         .requestMatchers("/error").permitAll()
                         .anyRequest().authenticated())
                 .oauth2ResourceServer(oauth2 -> oauth2.jwt(Customizer.withDefaults()));

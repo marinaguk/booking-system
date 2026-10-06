@@ -31,7 +31,7 @@ public class BookingController{
 
         int bookingId = bookingService.createBooking(userId, createBookingRequest);
 
-        return ResponseEntity.created(URI.create("/booking?id="+bookingId)).body(Map.of("message", "Booking Created"));
+        return ResponseEntity.created(URI.create("/booking/" + bookingId)).body(Map.of("message", "Booking Created"));
     }
 
     @GetMapping("/my")
@@ -43,18 +43,18 @@ public class BookingController{
         return ResponseEntity.ok(responseList);
     }
 
-    @DeleteMapping
+    @DeleteMapping("/{id}")
     public ResponseEntity<Void> delete(@AuthenticationPrincipal Jwt jwt,
-                                       @RequestParam int id) {
+                                       @PathVariable int id) {
         int userId = Integer.parseInt(jwt.getSubject());
         bookingService.deleteBooking(userId, id);
 
         return ResponseEntity.noContent().build();
     }
 
-    @GetMapping
+    @GetMapping("/{id}")
     public ResponseEntity<BookingResponse> getById (@AuthenticationPrincipal Jwt jwt,
-                                                    @RequestParam int id) {
+                                                    @PathVariable int id) {
         int userId = Integer.parseInt(jwt.getSubject());
         BookingResponse bookingResponse = bookingService.getBookingById(userId, id);
         return ResponseEntity.ok(bookingResponse);

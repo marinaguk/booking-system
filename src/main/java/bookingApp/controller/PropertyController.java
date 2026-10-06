@@ -43,8 +43,8 @@ public class PropertyController{
         return ResponseEntity.ok(searchPropertyResponse);
     }
 
-    @DeleteMapping
-    public ResponseEntity<Void> delete(@RequestParam int id,
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> delete(@PathVariable int id,
                                        @AuthenticationPrincipal Jwt jwt) {
 
         int userId = Integer.parseInt(jwt.getSubject());
@@ -54,15 +54,15 @@ public class PropertyController{
         return ResponseEntity.noContent().build();
     }
 
-    @GetMapping("/availability")
-    public ResponseEntity<PropertyAvailabilityResponse> getAvailability(@RequestParam int id) {
+    @GetMapping("/{id}/availability")
+    public ResponseEntity<PropertyAvailabilityResponse> getAvailability(@PathVariable int id) {
 
         PropertyAvailabilityResponse availabilityResponse = propertyService.getAvailability(id);
         return ResponseEntity.ok(availabilityResponse);
     }
 
-    @GetMapping("/allbookings")
-    public ResponseEntity<AllBookingResponse> getAllBooking(@RequestParam int id,
+    @GetMapping("/{id}/bookings")
+    public ResponseEntity<AllBookingResponse> getAllBooking(@PathVariable int id,
                                                             @AuthenticationPrincipal Jwt jwt,
                                                             @RequestParam(defaultValue = "1") @Min(value = 1, message = "Page must be positive") int page,
                                                             @RequestParam(defaultValue = "5") @Min(value = 1, message = "Size must be positive") @Max(value = 100, message = "Max size is 100") int size){
@@ -72,8 +72,8 @@ public class PropertyController{
         return ResponseEntity.ok(response);
     }
 
-    @GetMapping
-    public ResponseEntity<PropertyResponse> getById(@RequestParam int id) {
+    @GetMapping("/{id}")
+    public ResponseEntity<PropertyResponse> getById(@PathVariable int id) {
         PropertyResponse propertyResponse = propertyService.getResponseById(id);
         return ResponseEntity.ok(propertyResponse);
     }
