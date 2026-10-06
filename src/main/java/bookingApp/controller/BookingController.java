@@ -1,15 +1,17 @@
 package bookingApp.controller;
 
 import bookingApp.dto.*;
+import bookingApp.model.SortDirection;
 import bookingApp.service.*;
 import bookingApp.util.*;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
 import java.net.URI;
 import java.util.List;
 import java.util.Map;
-import static bookingApp.util.ValidationUtil.requireValidSortDirection;
 
 @RestController
 @RequestMapping("/booking")
@@ -22,10 +24,10 @@ public class BookingController{
     }
 
     @PostMapping
-    public ResponseEntity<Map<String, String>> create(@RequestHeader(value = "Session-Id", required = false) String sessionId,
+    public ResponseEntity<Map<String, String>> create(@AuthenticationPrincipal Jwt jwt,
                                                       @Valid @RequestBody CreateBookingRequest createBookingRequest) {
 
-        int userId = ValidationUtil.requireValidSessionId(sessionId);
+        int userId = Integer.parseInt(jwt.getSubject());
 
         int bookingId = bookingService.createBooking(userId, createBookingRequest);
 
@@ -33,28 +35,27 @@ public class BookingController{
     }
 
     @GetMapping("/my")
-    public ResponseEntity<List<BookingResponse>> searchMyBooking(@RequestHeader(value = "Session-Id", required = false) String sessionId,
-                                                                 @RequestParam(defaultValue = "asc") String sortDirection) {
-        int userId = ValidationUtil.requireValidSessionId(sessionId);
-        requireValidSortDirection(sortDirection);
+    public ResponseEntity<List<BookingResponse>> searchMyBooking(@AuthenticationPrincipal Jwt jwt,
+                                                                 @RequestParam(defaultValue = "ASC") SortDirection sortDirection) {
+        int userId = Integer.parseInt(jwt.getSubject());
         List<BookingResponse> responseList = bookingService.searchMyBooking(userId, sortDirection);
 
         return ResponseEntity.ok(responseList);
     }
 
     @DeleteMapping
-    public ResponseEntity<Void> delete(@RequestHeader(value = "Session-Id", required = false) String sessionId,
+    public ResponseEntity<Void> delete(@AuthenticationPrincipal Jwt jwt,
                                        @RequestParam int id) {
-        int userId = ValidationUtil.requireValidSessionId(sessionId);
+        int userId = Integer.parseInt(jwt.getSubject());
         bookingService.deleteBooking(userId, id);
 
         return ResponseEntity.noContent().build();
     }
 
     @GetMapping
-    public ResponseEntity<BookingResponse> getById (@RequestHeader(value = "Session-Id", required = false) String sessionId,
+    public ResponseEntity<BookingResponse> getById (@AuthenticationPrincipal Jwt jwt,
                                                     @RequestParam int id) {
-        int userId = ValidationUtil.requireValidSessionId(sessionId);
+        int userId = Integer.parseInt(jwt.getSubject());
         BookingResponse bookingResponse = bookingService.getBookingById(userId, id);
         return ResponseEntity.ok(bookingResponse);
     }

@@ -3,6 +3,7 @@ package bookingApp.service;
 import bookingApp.exception.UnauthorizedException;
 import bookingApp.mapper.BookingMapper;
 import bookingApp.model.Role;
+import bookingApp.model.SortDirection;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -38,7 +39,7 @@ public class BookingService {
 
     @Transactional
     public int createBooking(int userId, CreateBookingRequest request) {
-        UserEntity userEntity = userService.getUserEntityById(userId).orElseThrow(() -> new UnauthorizedException("Session is invalid"));
+        UserEntity userEntity = userService.getUserEntityById(userId).orElseThrow(() -> new UnauthorizedException("User not found"));
         PropertyEntity propertyEntity = propertyService.getEntityById(request.getPropertyId());
 
         LocalDate startDate = request.getStartDate();
@@ -64,9 +65,9 @@ public class BookingService {
     }
 
     @Transactional(readOnly = true)
-    public List<BookingResponse> searchMyBooking(int userId, String sortDirection) {
+    public List<BookingResponse> searchMyBooking(int userId, SortDirection sortDirection) {
 
-        Sort sort = Sort.by(Sort.Direction.fromString(sortDirection), "startDate");
+        Sort sort = Sort.by(Sort.Direction.fromString(sortDirection.name()), "startDate");
 
         List<BookingEntity> bookingEntityList = bookingRepository.findByUserEntityId(userId, sort);
 
@@ -94,7 +95,7 @@ public class BookingService {
     private BookingEntity findBookingWithAccessCheck(int userId, int bookingId) {
         BookingEntity bookingEntity = getEntityById(bookingId);
 
-        UserEntity userEntity = userService.getUserEntityById(userId).orElseThrow(() -> new UnauthorizedException("Session is invalid"));
+        UserEntity userEntity = userService.getUserEntityById(userId).orElseThrow(() -> new UnauthorizedException("User not found"));
 
         if (bookingEntity.getUserEntity().getId() != userId && userEntity.getRole() == Role.USER) {
             throw new AccessDeniedException("No access");

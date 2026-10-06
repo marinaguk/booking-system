@@ -1,13 +1,18 @@
 package bookingApp.controller;
 
-import bookingApp.dto.*;
+import bookingApp.dto.AddPropertyRequest;
+import bookingApp.dto.LoginRequest;
+import bookingApp.dto.RegisterRequest;
+import bookingApp.dto.UserResponse;
 import bookingApp.entity.UserEntity;
-import bookingApp.exception.*;
-import bookingApp.service.*;
-import bookingApp.util.*;
-
+import bookingApp.exception.NotFoundException;
+import bookingApp.exception.UnauthorizedException;
+import bookingApp.service.PropertyService;
+import bookingApp.service.UserService;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
 
 import java.net.URI;
@@ -39,19 +44,18 @@ public class UserController{
     @PostMapping("/login")
     public ResponseEntity<Map<String, String>> login(@Valid @RequestBody LoginRequest loginRequest) {
 
-        String sessionId = userService.login(loginRequest.getName(), loginRequest.getPassword());
+        String token = userService.login(loginRequest.getName(), loginRequest.getPassword());
 
-        if (sessionId == null) {throw new UnauthorizedException("Invalid credentials");}
-
-        return ResponseEntity.ok(Map.of("sessionId", sessionId));
+        return ResponseEntity.ok(Map.of("token", token));
     }
 
     @PostMapping("/property")
-    public ResponseEntity<Map<String, String>> addProperty(@RequestHeader(value = "Session-Id", required = false) String sessionId, @Valid @RequestBody AddPropertyRequest addPropertyRequest) {
+    public ResponseEntity<Map<String, String>> addProperty(@AuthenticationPrincipal Jwt jwt,
+                                                           @Valid @RequestBody AddPropertyRequest addPropertyRequest) {
 
-        int userId = ValidationUtil.requireValidSessionId(sessionId);
+        int userId = Integer.parseInt(jwt.getSubject());
 
-        UserEntity userEntity = userService.getUserEntityById(userId).orElseThrow(()-> new UnauthorizedException("Session is invalid"));
+        UserEntity userEntity = userService.getUserEntityById(userId).orElseThrow(()-> new UnauthorizedException("User not found"));
 
         int propertyId = propertyService.addProperty(userEntity, addPropertyRequest);
 

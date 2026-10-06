@@ -2,8 +2,9 @@ package bookingApp.repository;
 
 import bookingApp.dto.SearchPropertyRequest;
 import bookingApp.entity.PropertyEntity;
-import bookingApp.exception.BadRequestException;
+import bookingApp.model.PropertySortField;
 import bookingApp.model.SearchPropertyResult;
+import bookingApp.model.SortDirection;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import jakarta.persistence.TypedQuery;
@@ -17,7 +18,11 @@ public class PropertyRepositoryCustomImpl implements PropertyRepositoryCustom{
 
 
     @Override
-    public SearchPropertyResult search(SearchPropertyRequest request, int offset, int size, String sortBy, String sortDirection) {
+    public SearchPropertyResult search(SearchPropertyRequest request,
+                                       int offset,
+                                       int size,
+                                       PropertySortField sortBy,
+                                       SortDirection sortDirection) {
         SearchPropertyResult searchResult = new SearchPropertyResult();
 
         StringBuilder itemsJpql =
@@ -47,22 +52,11 @@ public class PropertyRepositoryCustomImpl implements PropertyRepositoryCustom{
                     ")");
         }
 
-        String sortField;
-
-        switch (sortBy) {
-            case "price":
-                sortField = "p.propertyPrice";
-                break;
-            case "name":
-                sortField = "p.propertyName";
-                break;
-            default:
-                throw new BadRequestException("Invalid sort field");
-        }
+        String sortField = sortBy.getFieldName();
 
         String countRequest = itemsJpql.toString().replace("SELECT p", "SELECT COUNT(p)");
 
-        itemsJpql.append(" ORDER BY " + sortField + " " + sortDirection.toUpperCase());
+        itemsJpql.append(" ORDER BY " + sortField + " " + sortDirection.name());
 
         String itemsRequest = itemsJpql.toString();
 

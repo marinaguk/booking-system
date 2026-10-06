@@ -2,12 +2,12 @@ package bookingApp.service;
 
 import bookingApp.entity.UserEntity;
 import bookingApp.exception.BadRequestException;
+import bookingApp.exception.UnauthorizedException;
 import bookingApp.repository.UserRepository;
-import bookingApp.util.SessionManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.mindrot.jbcrypt.BCrypt;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -21,9 +21,14 @@ public class UserService {
             LoggerFactory.getLogger(UserService.class);
 
     private final UserRepository userRepository;
+    private final PasswordEncoder passwordEncoder;
+    private final TokenService tokenService;
 
-    public UserService(UserRepository userRepository) {
+    public UserService(UserRepository userRepository,  PasswordEncoder passwordEncoder,
+                       TokenService tokenService) {
         this.userRepository = userRepository;
+        this.passwordEncoder = passwordEncoder;
+        this.tokenService = tokenService;
     }
 
     @Transactional
@@ -32,7 +37,7 @@ public class UserService {
             throw new BadRequestException("User already exists");
         }
 
-        String hashedPassword = BCrypt.hashpw(password, BCrypt.gensalt());
+        String hashedPassword = passwordEncoder.encode(password);
 
         UserEntity userEntity = new UserEntity(name, hashedPassword);
         userRepository.save(userEntity);
@@ -45,17 +50,14 @@ public class UserService {
 
     @Transactional(readOnly = true)
     public String login(String name, String password) {
-        UserEntity user = userRepository.findByName(name).orElse(null);
+        UserEntity user = userRepository.findByName(name)
+                .orElseThrow(() -> new UnauthorizedException("Invalid credentials"));
 
-        if (user == null) {
-            return null;
+        if (!passwordEncoder.matches(password, user.getPassword())) {
+            throw new UnauthorizedException("Invalid credentials");
         }
 
-        if (!BCrypt.checkpw(password, user.getPassword())) {
-            return null;
-        }
-
-        return SessionManager.createSession(user.getId());
+        return tokenService.generateToken(user);
     }
 
     @Transactional(readOnly = true)

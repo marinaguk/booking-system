@@ -6,8 +6,10 @@ import bookingApp.entity.PropertyEntity;
 import bookingApp.entity.UserEntity;
 import bookingApp.mapper.BookingMapper;
 import bookingApp.mapper.PropertyMapper;
+import bookingApp.model.PropertySortField;
 import bookingApp.model.Role;
 import bookingApp.model.SearchPropertyResult;
+import bookingApp.model.SortDirection;
 import bookingApp.repository.BookingRepository;
 import bookingApp.repository.PropertyRepository;
 import bookingApp.repository.UserRepository;
@@ -44,10 +46,7 @@ public class PropertyService {
     @Transactional
     public int addProperty(UserEntity owner, AddPropertyRequest addPropertyRequest) {
         PropertyEntity propertyEntity = addPropertyRequest.propertyRequestToEntity(owner);
-
-        if (propertyRepository.findByPropertyName(propertyEntity.getPropertyName()).isPresent()) {
-            throw new BadRequestException("Property already exist");
-        }
+        propertyEntity.setPropertyCity(addPropertyRequest.getCity().toLowerCase());
 
         propertyRepository.save(propertyEntity);
 
@@ -57,8 +56,10 @@ public class PropertyService {
     }
 
     @Transactional(readOnly = true)
-    public SearchPropertyResponse search(SearchPropertyRequest request, int page, int size, String sortBy, String sortDirection) {
+    public SearchPropertyResponse search(SearchPropertyRequest request, int page, int size, PropertySortField sortBy, SortDirection sortDirection) {
         int offset = (page - 1) * size;
+
+        request.setCity(request.getCity().toLowerCase());
         SearchPropertyResult searchProperties = propertyRepository.search(request, offset, size, sortBy, sortDirection);
 
         long totalItems = searchProperties.getTotalItems();
@@ -78,9 +79,9 @@ public class PropertyService {
     @Transactional
     public void delete(int userId, int propertyId) {
         PropertyEntity propertyEntity = getEntityById(propertyId);
-        UserEntity userEntity = userRepository.findById(userId).orElseThrow(() -> new UnauthorizedException("Session is invalid"));
+        UserEntity userEntity = userRepository.findById(userId).orElseThrow(() -> new UnauthorizedException("User not found"));
 
-        if (propertyEntity.getOwner().getId() != userEntity.getId() && userEntity.getRole() == Role.USER) {
+        if (propertyEntity.getOwner().getId() != userId && userEntity.getRole() == Role.USER) {
             throw new AccessDeniedException("This property cannot be deleted");
         }
 
@@ -109,9 +110,9 @@ public class PropertyService {
         int offset = (page - 1) * size;
 
         PropertyEntity propertyEntity = getEntityById(propertyId);
-        UserEntity userEntity = userRepository.findById(userId).orElseThrow(() -> new UnauthorizedException("Session is invalid"));
+        UserEntity userEntity = userRepository.findById(userId).orElseThrow(() -> new UnauthorizedException("User not found"));
 
-        if (propertyEntity.getOwner().getId() != userEntity.getId() && userEntity.getRole() == Role.USER) {
+        if (propertyEntity.getOwner().getId() != userId && userEntity.getRole() == Role.USER) {
             throw new AccessDeniedException("Inaccessible");
         }
 

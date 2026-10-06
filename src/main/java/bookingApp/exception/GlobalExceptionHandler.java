@@ -4,10 +4,7 @@ import jakarta.validation.ConstraintViolation;
 import jakarta.validation.ConstraintViolationException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.HttpStatusCode;
-import org.springframework.http.ResponseEntity;
+import org.springframework.http.*;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -35,48 +32,50 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
         for (FieldError fieldError : ex.getBindingResult().getFieldErrors()) {
             errors.put(fieldError.getField(), fieldError.getDefaultMessage());
         }
+        ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, "Validation failed");
+        problemDetail.setProperty("errors", errors);
 
-        return ResponseEntity.badRequest().body(Map.of("errors", errors));
+        return ResponseEntity.badRequest().headers(headers).body(problemDetail);
     }
 
     @ExceptionHandler(BadRequestException.class)
-    public ResponseEntity<Map<String, String>> handleBadRequest(BadRequestException e) {
+    public ProblemDetail handleBadRequest(BadRequestException e) {
         logger.warn("BadRequestException", e);
-        return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        return ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, e.getMessage());
     }
 
     @ExceptionHandler(UnauthorizedException.class)
-    public ResponseEntity<Map<String, String>> handleUnauthorized(UnauthorizedException e) {
+    public ProblemDetail handleUnauthorized(UnauthorizedException e) {
         logger.warn("UnauthorizedException", e);
-        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("error", e.getMessage()));
+        return ProblemDetail.forStatusAndDetail(HttpStatus.UNAUTHORIZED, e.getMessage());
     }
 
     @ExceptionHandler(AccessDeniedException.class)
-    public ResponseEntity<Map<String, String>> handleAccessDenied(AccessDeniedException e) {
+    public ProblemDetail handleAccessDenied(AccessDeniedException e) {
         logger.warn("AccessDeniedException", e);
-        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("error", e.getMessage()));
+        return ProblemDetail.forStatusAndDetail(HttpStatus.FORBIDDEN, e.getMessage());
     }
 
     @ExceptionHandler(NotFoundException.class)
-    public ResponseEntity<Map<String, String>> handleNotFound(NotFoundException e) {
+    public ProblemDetail handleNotFound(NotFoundException e) {
         logger.warn("NotFoundException", e);
-        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error", e.getMessage()));
+        return ProblemDetail.forStatusAndDetail(HttpStatus.NOT_FOUND, e.getMessage());
     }
 
     @ExceptionHandler(Exception.class)
-    public ResponseEntity<Map<String, String>> handle(Exception e) {
+    public ProblemDetail handle(Exception e) {
         logger.error("Exception", e);
-        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of("error", "Internal Server Error"));
+        return ProblemDetail.forStatusAndDetail(HttpStatus.INTERNAL_SERVER_ERROR, "Internal Server Error");
     }
 
     @ExceptionHandler(MethodArgumentTypeMismatchException.class)
-    public  ResponseEntity<Map<String, String>> handleMethodArgumentTypeMismatch(MethodArgumentTypeMismatchException e) {
+    public  ProblemDetail handleMethodArgumentTypeMismatch(MethodArgumentTypeMismatchException e) {
         logger.warn("MethodArgumentTypeMismatchException", e);
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("error", "Invalid parameter: " + e.getName()));
+        return ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, "Invalid parameter: " + e.getName());
     }
 
     @ExceptionHandler(ConstraintViolationException.class)
-    public ResponseEntity<Map<String, Object>> handleConstraintViolation(ConstraintViolationException e) {
+    public ProblemDetail handleConstraintViolation(ConstraintViolationException e) {
         logger.warn("ConstraintViolationException", e);
 
         Map<String, String> errors = new HashMap<>();
@@ -86,7 +85,10 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
             errors.put(field, violation.getMessage());
         }
 
-        return ResponseEntity.badRequest().body(Map.of("errors", errors));
+        ProblemDetail problemDetail =  ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, "Validation failed");
+        problemDetail.setProperty("errors", errors);
+
+        return problemDetail;
     }
 
 
