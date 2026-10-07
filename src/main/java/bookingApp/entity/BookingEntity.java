@@ -11,7 +11,7 @@ public class BookingEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private int id;
+    private Integer id;
 
     @ManyToOne
     @JoinColumn(name = "user_id")
@@ -33,26 +33,19 @@ public class BookingEntity {
         if (this == o) return true;
 
         if (!(o instanceof BookingEntity)) return false;
-
-        BookingEntity that = (BookingEntity) o;
-        return id == that.getId() &&
-        Objects.equals(userEntity, that.getUserEntity()) &&
-        Objects.equals(propertyEntity, that.getPropertyEntity()) &&
-        Objects.equals(startDate, that.getStartDate()) &&
-        Objects.equals(endDate, that.getEndDate());
-
+        return id != null && id.equals(((BookingEntity) o).getId());
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(id, userEntity.getId(), propertyEntity.getPropertyId(), startDate, endDate);
+        return this.getClass().hashCode();
     }
 
-    public int getId() {
+    public Integer getId() {
         return id;
     }
 
-    public void setId(int id) {
+    public void setId(Integer id) {
         this.id = id;
     }
 

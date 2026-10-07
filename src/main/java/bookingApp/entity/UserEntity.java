@@ -21,7 +21,7 @@ public class UserEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private int id;
+    private Integer id;
 
     private String name;
     private String password;
@@ -33,11 +33,11 @@ public class UserEntity {
     private Role role;
 
 
-    public int getId() {
+    public Integer getId() {
         return id;
     }
 
-    public void setId(int id) {
+    public void setId(Integer id) {
         this.id = id;
     }
 
@@ -72,11 +72,11 @@ public class UserEntity {
 
         if (!(obj instanceof UserEntity)) return false;
 
-        return id == ((UserEntity) obj).getId();
+        return id != null && id.equals(((UserEntity) obj).getId());
     }
 
     @Override
     public int hashCode() {
-        return id;
+        return this.getClass().hashCode();
     }
 }

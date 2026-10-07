@@ -9,18 +9,10 @@ public class PropertyEntity {
 
     public PropertyEntity() {}
 
-    public PropertyEntity(int id, String name, String city, double price, UserEntity owner) {
-        this.propertyId = id;
-        this.propertyName = name;
-        this.propertyCity = city;
-        this.propertyPrice = price;
-        this.owner = owner;
-    }
-
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "property_id")
-    private int propertyId;
+    private Integer propertyId;
 
     @Column(name = "property_name")
     private String propertyName;
@@ -37,11 +29,11 @@ public class PropertyEntity {
     private UserEntity owner;
 
 
-    public int getPropertyId() {
+    public Integer getPropertyId() {
         return propertyId;
     }
 
-    public void setPropertyId(int propertyId) {
+    public void setPropertyId(Integer propertyId) {
         this.propertyId = propertyId;
     }
 
@@ -84,11 +76,11 @@ public class PropertyEntity {
 
         if (!(obj instanceof PropertyEntity)) return false;
 
-        return propertyId == ((PropertyEntity) obj).getPropertyId();
+        return propertyId != null && propertyId.equals(((PropertyEntity) obj).getPropertyId());
     }
 
     @Override
     public int hashCode() {
-        return propertyId;
+        return this.getClass().hashCode();
     }
 }

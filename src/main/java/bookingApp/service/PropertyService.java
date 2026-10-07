@@ -6,20 +6,28 @@ import bookingApp.entity.PropertyEntity;
 import bookingApp.entity.UserEntity;
 import bookingApp.mapper.BookingMapper;
 import bookingApp.mapper.PropertyMapper;
+import bookingApp.model.PropertySortField;
 import bookingApp.model.Role;
-import bookingApp.model.SearchBookingResult;
 import bookingApp.model.SearchPropertyResult;
+import bookingApp.model.SortDirection;
 import bookingApp.repository.BookingRepository;
 import bookingApp.repository.PropertyRepository;
 import bookingApp.repository.UserRepository;
 import bookingApp.exception.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
+
+import org.springframework.data.domain.Pageable;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
-import static bookingApp.util.GsonUtil.errorToJson;
 
+@Service
 public class PropertyService {
 
     private static final Logger logger =
@@ -35,12 +43,10 @@ public class PropertyService {
         this.bookingRepository = bookingRepository;
     }
 
+    @Transactional
     public int addProperty(UserEntity owner, AddPropertyRequest addPropertyRequest) {
         PropertyEntity propertyEntity = addPropertyRequest.propertyRequestToEntity(owner);
-
-        if (propertyRepository.findByName(propertyEntity.getPropertyName()) != null) {
-            throw new BadRequestException("Property already exist");
-        }
+        propertyEntity.setPropertyCity(addPropertyRequest.getCity().toLowerCase());
 
         propertyRepository.save(propertyEntity);
 
@@ -49,8 +55,14 @@ public class PropertyService {
         return propertyEntity.getPropertyId();
     }
 
-    public SearchPropertyResponse search(SearchPropertyRequest request, int page, int size, String sortBy, String sortDirection) {
+    @Transactional(readOnly = true)
+    public SearchPropertyResponse search(SearchPropertyRequest request, int page, int size, PropertySortField sortBy, SortDirection sortDirection) {
         int offset = (page - 1) * size;
+
+        if (request.getCity() != null) {
+            request.setCity(request.getCity().toLowerCase());
+        }
+
         SearchPropertyResult searchProperties = propertyRepository.search(request, offset, size, sortBy, sortDirection);
 
         long totalItems = searchProperties.getTotalItems();
@@ -62,21 +74,17 @@ public class PropertyService {
         response.setPage(page);
         response.setSize(size);
         response.setTotalItems(totalItems);
-        response.setTotalPages(totalPages);;
+        response.setTotalPages(totalPages);
 
         return response;
     }
 
-
+    @Transactional
     public void delete(int userId, int propertyId) {
-        PropertyEntity propertyEntity = propertyRepository.findById(propertyId);
-        UserEntity userEntity = userRepository.findById(userId);
+        PropertyEntity propertyEntity = getEntityById(propertyId);
+        UserEntity userEntity = userRepository.findById(userId).orElseThrow(() -> new UnauthorizedException("User not found"));
 
-        if (propertyEntity == null) {
-            throw new NotFoundException("Property not found");
-        }
-
-        if (propertyEntity.getOwner().getId() != userEntity.getId() && userEntity.getRole() == Role.USER) {
+        if (propertyEntity.getOwner().getId() != userId && userEntity.getRole() == Role.USER) {
             throw new AccessDeniedException("This property cannot be deleted");
         }
 
@@ -85,13 +93,9 @@ public class PropertyService {
         logger.info("Property deleted. User id: {}, Property id: {}", userId, propertyId);
     }
 
+    @Transactional(readOnly = true)
     public PropertyAvailabilityResponse getAvailability(int propertyId) {
-        PropertyEntity propertyEntity = propertyRepository.findById(propertyId);
-        if (propertyEntity == null) {
-            throw new NotFoundException("Property not found");
-        }
-
-        List<BookingEntity> bookingEntityList = bookingRepository.findByPropertyId(propertyId);
+        List<BookingEntity> bookingEntityList = bookingRepository.findActiveByPropertyId(propertyId);
 
         PropertyAvailabilityResponse response = new PropertyAvailabilityResponse();
 
@@ -104,45 +108,40 @@ public class PropertyService {
         return response;
     }
 
+    @Transactional(readOnly = true)
     public AllBookingResponse getAllBooking(int userId, int propertyId, int page, int size) {
         int offset = (page - 1) * size;
 
-        PropertyEntity propertyEntity = propertyRepository.findById(propertyId);
-        UserEntity userEntity = userRepository.findById(userId);
+        PropertyEntity propertyEntity = getEntityById(propertyId);
+        UserEntity userEntity = userRepository.findById(userId).orElseThrow(() -> new UnauthorizedException("User not found"));
 
-        if (propertyEntity == null) {
-            throw new NotFoundException("Property not found");
-        }
-
-        if (propertyEntity.getOwner().getId() != userEntity.getId() && userEntity.getRole() == Role.USER) {
+        if (propertyEntity.getOwner().getId() != userId && userEntity.getRole() == Role.USER) {
             throw new AccessDeniedException("Inaccessible");
         }
 
-        SearchBookingResult result = bookingRepository.getAllBookingByPropertyId(propertyId,offset,size);
+        Pageable pageable = PageRequest.of(page - 1, size, Sort.by("startDate"));
 
-        long totalItems = result.getTotalItems();
-        List<AllInfoBookingResponse> responseList
-                = PropertyMapper.convertPropertyEntityToBookingAllInfoList(result.getItems());
-        int totalPages = (int)Math.ceil((double) totalItems /size);
 
-        AllBookingResponse response = new AllBookingResponse();
-        response.setBookingResponseList(responseList);
-        response.setTotalBookings(totalItems);
-        response.setPage(page);
-        response.setSize(size);
-        response.setTotalPages(totalPages);
+        Page<BookingResponseAllInfo> bookingResponsePage = bookingRepository.findByPropertyEntityPropertyId(propertyId, pageable)
+                .map(BookingMapper::convertBookingEntityToResponseAllInfo);
 
-        return response;
+        AllBookingResponse allBookingResponse = new AllBookingResponse(bookingResponsePage.getTotalElements(),
+                page, size, bookingResponsePage.getTotalPages(),  bookingResponsePage.getContent());
+
+        return allBookingResponse;
     }
 
-    public PropertyResponse getById(int id) {
-        PropertyEntity propertyEntity = propertyRepository.findById(id);
+    @Transactional(readOnly = true)
+    public PropertyResponse getResponseById(int id) {
 
-        if (propertyEntity == null) {
-            throw new NotFoundException("Property not found");
-        }
+        PropertyEntity propertyEntity = propertyRepository.findById(id).orElseThrow(() -> new NotFoundException("Property not found"));
 
         return PropertyMapper.convertPropertyEntityToResponse(propertyEntity);
+    }
+
+    @Transactional(readOnly = true)
+    public PropertyEntity getEntityById(int id) {
+        return propertyRepository.findById(id).orElseThrow(() -> new NotFoundException("Property not found"));
     }
 
 }

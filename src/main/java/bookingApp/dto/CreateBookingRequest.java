@@ -1,18 +1,27 @@
 package bookingApp.dto;
 
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Positive;
+
 import java.time.LocalDate;
 
 public class CreateBookingRequest {
 
-    private int propertyId;
+    @NotNull(message = "Property ID is required")
+    @Positive(message = "Property ID must be positive")
+    private Integer propertyId;
+
+    @NotNull(message = "Start date is required")
     private LocalDate startDate;
+
+    @NotNull(message = "End date is required")
     private LocalDate endDate;
 
-    public int getPropertyId() {
+    public Integer getPropertyId() {
         return propertyId;
     }
 
-    public void setPropertyId(int propertyId) {
+    public void setPropertyId(Integer propertyId) {
         this.propertyId = propertyId;
     }
 

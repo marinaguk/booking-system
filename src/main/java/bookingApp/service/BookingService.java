@@ -3,6 +3,7 @@ package bookingApp.service;
 import bookingApp.exception.UnauthorizedException;
 import bookingApp.mapper.BookingMapper;
 import bookingApp.model.Role;
+import bookingApp.model.SortDirection;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -11,38 +12,35 @@ import bookingApp.dto.BookingResponse;
 import bookingApp.entity.*;
 import bookingApp.exception.*;
 import bookingApp.repository.*;
+import org.springframework.data.domain.Sort;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.util.List;
 
+
+@Service
 public class BookingService {
 
     private static final Logger logger =
             LoggerFactory.getLogger(BookingService.class);
 
-    private final PropertyRepository propertyRepository;
     private final BookingRepository bookingRepository;
     private final UserService userService;
+    private final PropertyService propertyService;
 
-    public BookingService(PropertyRepository propertyRepository,
-                          BookingRepository bookingRepository,
-                          UserService userService) {
-        this.propertyRepository = propertyRepository;
+    public BookingService(BookingRepository bookingRepository,
+                          UserService userService, PropertyService propertyService) {
         this.bookingRepository = bookingRepository;
         this.userService = userService;
+        this.propertyService = propertyService;
     }
 
+    @Transactional
     public int createBooking(int userId, CreateBookingRequest request) {
-        UserEntity userEntity = userService.getUserEntityById(userId);
-        PropertyEntity propertyEntity = propertyRepository.findById(request.getPropertyId());
-
-        if (propertyEntity == null) {
-            throw new NotFoundException("Property not found");
-        }
-
-        if (userEntity == null) {
-            throw new UnauthorizedException("Session is invalid");
-        }
+        UserEntity userEntity = userService.getUserEntityById(userId).orElseThrow(() -> new UnauthorizedException("User not found"));
+        PropertyEntity propertyEntity = propertyService.getEntityById(request.getPropertyId());
 
         LocalDate startDate = request.getStartDate();
         LocalDate endDate = request.getEndDate();
@@ -66,18 +64,22 @@ public class BookingService {
         return  bookingEntity.getId();
     }
 
-    public List<BookingResponse> searchMyBooking(int userId, String sortBy, String sortDirection) {
+    @Transactional(readOnly = true)
+    public List<BookingResponse> searchMyBooking(int userId, SortDirection sortDirection) {
 
-        List<BookingEntity> bookingEntityList = bookingRepository.searchByUserId(userId, sortBy, sortDirection);
+        Sort sort = Sort.by(Sort.Direction.fromString(sortDirection.name()), "startDate");
+
+        List<BookingEntity> bookingEntityList = bookingRepository.findByUserEntityId(userId, sort);
 
         List<BookingResponse> responseList = BookingMapper.convertEntityToResponseList(bookingEntityList);
 
         return responseList;
     }
 
+    @Transactional(readOnly = true)
     public boolean isBookingDateFree(int propertyId, LocalDate startDate, LocalDate endDate) {
 
-        List<BookingEntity> existBookings = bookingRepository.findByPropertyId(propertyId);
+        List<BookingEntity> existBookings = bookingRepository.findActiveByPropertyId(propertyId);
 
         for (BookingEntity bookingEntity : existBookings) {
             LocalDate startDateBooking = bookingEntity.getStartDate();
@@ -91,16 +93,9 @@ public class BookingService {
     }
 
     private BookingEntity findBookingWithAccessCheck(int userId, int bookingId) {
-        BookingEntity bookingEntity = bookingRepository.findById(bookingId);
-        UserEntity userEntity = userService.getUserEntityById(userId);
+        BookingEntity bookingEntity = getEntityById(bookingId);
 
-        if (bookingEntity == null) {
-            throw new NotFoundException("Booking not found");
-        }
-
-        if (userEntity == null) {
-            throw new UnauthorizedException("Session is invalid");
-        }
+        UserEntity userEntity = userService.getUserEntityById(userId).orElseThrow(() -> new UnauthorizedException("User not found"));
 
         if (bookingEntity.getUserEntity().getId() != userId && userEntity.getRole() == Role.USER) {
             throw new AccessDeniedException("No access");
@@ -109,7 +104,7 @@ public class BookingService {
         return bookingEntity;
     }
 
-
+    @Transactional
     public void deleteBooking(int userId, int bookingId) {
 
        findBookingWithAccessCheck(userId, bookingId);
@@ -119,11 +114,17 @@ public class BookingService {
         logger.info("Booking is deleted. User id: {}", userId);
     }
 
+    @Transactional(readOnly = true)
     public BookingResponse getBookingById(int userId, int bookingId) {
         BookingEntity bookingEntity = findBookingWithAccessCheck(userId, bookingId);
 
         BookingResponse response = BookingMapper.convertBookingEntityToResponse(bookingEntity);
         return response;
+    }
+
+    @Transactional(readOnly = true)
+    public BookingEntity getEntityById(int bookingId) {
+        return bookingRepository.findById(bookingId).orElseThrow(() -> new NotFoundException("Booking not found"));
     }
 
 

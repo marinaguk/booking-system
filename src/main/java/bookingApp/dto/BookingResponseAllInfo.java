@@ -2,17 +2,21 @@ package bookingApp.dto;
 
 import java.time.LocalDate;
 
-public class AllInfoBookingResponse {
+public class BookingResponseAllInfo {
 
     private int bookingId;
-
     private int propertyId;
-
     private int userId;
-
     private LocalDate startDate;
-
     private LocalDate endDate;
+
+    public BookingResponseAllInfo(int bookingId, int propertyId, int userId, LocalDate startDate, LocalDate endDate) {
+        this.bookingId = bookingId;
+        this.propertyId = propertyId;
+        this.userId = userId;
+        this.startDate = startDate;
+        this.endDate = endDate;
+    }
 
     public int getBookingId() {
         return bookingId;
