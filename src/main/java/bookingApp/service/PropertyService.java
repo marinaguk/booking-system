@@ -59,7 +59,10 @@ public class PropertyService {
     public SearchPropertyResponse search(SearchPropertyRequest request, int page, int size, PropertySortField sortBy, SortDirection sortDirection) {
         int offset = (page - 1) * size;
 
-        request.setCity(request.getCity().toLowerCase());
+        if (request.getCity() != null) {
+            request.setCity(request.getCity().toLowerCase());
+        }
+
         SearchPropertyResult searchProperties = propertyRepository.search(request, offset, size, sortBy, sortDirection);
 
         long totalItems = searchProperties.getTotalItems();

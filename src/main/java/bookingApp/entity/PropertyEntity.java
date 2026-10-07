@@ -76,7 +76,7 @@ public class PropertyEntity {
 
         if (!(obj instanceof PropertyEntity)) return false;
 
-        return propertyId != null && propertyId.equals(((PropertyEntity) obj).propertyId);
+        return propertyId != null && propertyId.equals(((PropertyEntity) obj).getPropertyId());
     }
 
     @Override

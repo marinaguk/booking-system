@@ -72,7 +72,7 @@ public class UserEntity {
 
         if (!(obj instanceof UserEntity)) return false;
 
-        return id != null && id.equals(((UserEntity) obj).id);
+        return id != null && id.equals(((UserEntity) obj).getId());
     }
 
     @Override
